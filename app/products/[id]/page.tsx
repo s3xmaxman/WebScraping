@@ -1,5 +1,6 @@
 import Modal from '@/components/Modal'
 import PriceInfoCard from '@/components/PriceInfoCard/PriceInfoCard'
+import ProductsCard from '@/components/ProductsCard'
 import { getProductById, getSimilarProducts } from '@/lib/actions'
 import { formatNumber } from '@/lib/ulits'
 import { Product } from '@/types'
@@ -187,10 +188,7 @@ type Props = {
   
             <div className="flex flex-wrap gap-10 mt-7 w-full">
               {similarProducts.map((product) => (
-                // <ProductCard key={product._id} product={product} />
-                <div key={product._id}>
-
-                </div>
+                 <ProductsCard key={product._id} product={product} />
               ))}
             </div>
           </div>
