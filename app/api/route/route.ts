@@ -7,7 +7,7 @@ import { NextResponse } from "next/server";
 
 
 // この関数は最大300秒間実行することができます
-export const maxDuration = 300;
+export const maxDuration = 10;
 
 // 強制的に動的なレスポンスを生成します
 export const dynamic = "force-dynamic";
