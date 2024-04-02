@@ -29,7 +29,7 @@ const ProductsCard = ({ product }: Props) => {
                     {product.category}
                 </p>
 
-                <p>
+                <p className='text-black text-lg font-semibold'>
                     <span>
                         {product?.currency}
                     </span>
