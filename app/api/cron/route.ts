@@ -1,39 +1,32 @@
-import Product from "@/lib/models/product.models"
-import { connectToDB } from "@/lib/mongoose"
-import { generateEmailBody, sendEmail } from "@/lib/nodemailer";
-import { scrapeAmazonProduct } from "@/lib/scraper"
-import { getAveragePrice, getEmailNotifType, getHighestPrice, getLowestPrice } from "@/lib/ulits";
 import { NextResponse } from "next/server";
 
+import { connectToDB } from "@/lib/mongoose";
 
-// この関数は最大300秒間実行することができます
-export const maxDuration = 10;
+import { scrapeAmazonProduct } from "@/lib/scraper";
+import { generateEmailBody, sendEmail } from "@/lib/nodemailer";
+import Product from "@/lib/models/product.models";
+import { getAveragePrice, getEmailNotifType, getHighestPrice, getLowestPrice } from "@/lib/utils";
 
-// 強制的に動的なレスポンスを生成します
+export const maxDuration = 10; // This function can run for a maximum of 300 seconds
 export const dynamic = "force-dynamic";
-
-// レスポンスの再検証は行われません
 export const revalidate = 0;
 
-// GETリクエストを処理する関数です
 export async function GET(request: Request) {
   try {
     connectToDB();
 
-    // すべての商品をデータベースから取得します
     const products = await Product.find({});
 
-    if (!products) throw new Error("商品が取得できませんでした。");
+    if (!products) throw new Error("No product fetched");
 
-    // ======================== 1 最新の商品詳細をスクレイプしてデータベースを更新します
+    // ======================== 1 SCRAPE LATEST PRODUCT DETAILS & UPDATE DB
     const updatedProducts = await Promise.all(
       products.map(async (currentProduct) => {
-        // 商品をスクレイプします
+        // Scrape product
         const scrapedProduct = await scrapeAmazonProduct(currentProduct.url);
 
         if (!scrapedProduct) return;
 
-        // 更新された価格履歴を作成します
         const updatedPriceHistory = [
           ...currentProduct.priceHistory,
           {
@@ -41,7 +34,6 @@ export async function GET(request: Request) {
           },
         ];
 
-        // 商品オブジェクトを更新します
         const product = {
           ...scrapedProduct,
           priceHistory: updatedPriceHistory,
@@ -50,29 +42,30 @@ export async function GET(request: Request) {
           averagePrice: getAveragePrice(updatedPriceHistory),
         };
 
-        // データベース内の商品を更新します
+        // Update Products in DB
         const updatedProduct = await Product.findOneAndUpdate(
-          { url: product.url },
+          {
+            url: product.url,
+          },
           product
         );
 
-        // ======================== 2 各商品の状態を確認して、必要に応じてメールを送信します
+        // ======================== 2 CHECK EACH PRODUCT'S STATUS & SEND EMAIL ACCORDINGLY
         const emailNotifType = getEmailNotifType(
           scrapedProduct,
           currentProduct
         );
 
         if (emailNotifType && updatedProduct.users.length > 0) {
-          // 商品情報を構築します
           const productInfo = {
             title: updatedProduct.title,
             url: updatedProduct.url,
           };
-          // メールコンテンツを構築します
+          // Construct emailContent
           const emailContent = await generateEmailBody(productInfo, emailNotifType);
-          // ユーザーのメールアドレスの配列を取得します
+          // Get array of user emails
           const userEmails = updatedProduct.users.map((user: any) => user.email);
-          // メール通知を送信します
+          // Send email notification
           await sendEmail(emailContent, userEmails);
         }
 
@@ -80,12 +73,11 @@ export async function GET(request: Request) {
       })
     );
 
-    // JSON形式でレスポンスを返します
     return NextResponse.json({
       message: "Ok",
       data: updatedProducts,
     });
   } catch (error: any) {
-    throw new Error(`全ての商品の取得に失敗しました: ${error.message}`);
+    throw new Error(`Failed to get all products: ${error.message}`);
   }
 }
