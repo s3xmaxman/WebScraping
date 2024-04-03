@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
-
 import { connectToDB } from "@/lib/mongoose";
-
 import { scrapeAmazonProduct } from "@/lib/scraper";
 import { generateEmailBody, sendEmail } from "@/lib/nodemailer";
 import Product from "@/lib/models/product.models";
